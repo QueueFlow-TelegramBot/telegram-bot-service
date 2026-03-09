@@ -26,11 +26,29 @@ def next_keyboard(rooms: list[dict]) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(buttons)
 
 
-def confirm_keyboard(action: str, data: str) -> InlineKeyboardMarkup:
-    """Build a confirm/cancel keyboard."""
+def room_actions_keyboard(room_id: str) -> InlineKeyboardMarkup:
+    """Build action buttons for a selected room."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Call next", callback_data=f"confirm_next:{room_id}")],
+        [InlineKeyboardButton("Copy room ID", callback_data=f"copyid:{room_id}")],
+    ])
+
+
+def cancel_confirm_keyboard(room_id: str) -> InlineKeyboardMarkup:
+    """Confirm leaving the queue."""
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("Confirm", callback_data=f"confirm:{action}:{data}"),
-            InlineKeyboardButton("Cancel", callback_data="cancel"),
+            InlineKeyboardButton("Yes, leave", callback_data=f"do_cancel:{room_id}"),
+            InlineKeyboardButton("No, stay", callback_data="dismiss"),
+        ]
+    ])
+
+
+def next_confirm_keyboard(room_id: str, room_name: str) -> InlineKeyboardMarkup:
+    """Confirm calling the next person."""
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("Yes, call next", callback_data=f"do_next:{room_id}"),
+            InlineKeyboardButton("No, cancel", callback_data="dismiss"),
         ]
     ])

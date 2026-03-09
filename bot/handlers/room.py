@@ -1,24 +1,42 @@
 from telegram import Update
-from telegram.ext import ContextTypes
+from telegram.ext import ContextTypes, ConversationHandler
 from bot.middleware.auth import require_role
-from bot.keyboards.inline import rooms_keyboard, next_keyboard
+from bot.keyboards.inline import rooms_keyboard, next_keyboard, room_actions_keyboard, next_confirm_keyboard
 from services.user_client import get_cached_user
 from services.scheduling_client import create_room, get_rooms, next_in_queue
 from logger import get_logger
 
 log = get_logger(__name__)
 
+# ConversationHandler state
+WAITING_ROOM_NAME = 0
+
 
 @require_role("secretary")
 async def create_room_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle /create_room [room_name]."""
+    """Handle /create_room [room_name] — if no args, ask for room name."""
+    if context.args:
+        await _do_create_room(update, context, " ".join(context.args))
+        return ConversationHandler.END
+
+    await update.message.reply_text("Enter a name for the new room:")
+    return WAITING_ROOM_NAME
+
+
+async def create_room_name_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Receive room name text after /create_room prompt."""
+    room_name = update.message.text.strip()
+    if not room_name:
+        await update.message.reply_text("Please enter a valid room name.")
+        return WAITING_ROOM_NAME
+
+    await _do_create_room(update, context, room_name)
+    return ConversationHandler.END
+
+
+async def _do_create_room(update: Update, context: ContextTypes.DEFAULT_TYPE, room_name: str):
+    """Perform the actual create room logic."""
     telegram_id = update.effective_user.id
-
-    if not context.args:
-        await update.message.reply_text("Usage: /create_room [room_name]")
-        return
-
-    room_name = " ".join(context.args)
     user = get_cached_user(telegram_id)
     creator_id = user["user_id"]
 
@@ -94,30 +112,50 @@ async def next_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     room_id = context.args[0]
     log.info("next command", extra={"telegram_id": telegram_id, "room_id": room_id})
 
-    try:
-        data = await next_in_queue(room_id)
-    except Exception as e:
-        log.error("Failed to call next", extra={"error": str(e)})
-        await update.message.reply_text("Failed to call next person. Please try again.")
-        return
-
-    if data.get("error") == "queue_empty":
-        await update.message.reply_text(f"Queue is empty for room {room_id}.")
-    else:
-        await update.message.reply_text("Next user has been notified!")
+    await update.message.reply_text(
+        f"Call next person in room `{room_id}`?",
+        parse_mode="Markdown",
+        reply_markup=next_confirm_keyboard(room_id, room_id),
+    )
 
 
-async def next_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle inline keyboard callback for next:room_id."""
+async def room_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle inline keyboard callback for room:room_id — show room actions."""
     query = update.callback_query
     await query.answer()
 
-    data = query.data
-    if not data.startswith("next:"):
-        return
+    room_id = query.data.split(":", 1)[1]
+    log.info("room callback", extra={"room_id": room_id})
 
-    room_id = data.split(":", 1)[1]
-    log.info("next callback", extra={"room_id": room_id})
+    await query.edit_message_text(
+        f"Room `{room_id}` — choose an action:",
+        parse_mode="Markdown",
+        reply_markup=room_actions_keyboard(room_id),
+    )
+
+
+async def next_confirm_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle confirm_next:room_id and next:room_id — show confirmation before calling next."""
+    query = update.callback_query
+    await query.answer()
+
+    room_id = query.data.split(":", 1)[1]
+    log.info("next confirm callback", extra={"room_id": room_id})
+
+    await query.edit_message_text(
+        f"Call next person in room `{room_id}`?",
+        parse_mode="Markdown",
+        reply_markup=next_confirm_keyboard(room_id, room_id),
+    )
+
+
+async def do_next_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle do_next:room_id — actually call the next person."""
+    query = update.callback_query
+    await query.answer()
+
+    room_id = query.data.split(":", 1)[1]
+    log.info("do_next callback", extra={"room_id": room_id})
 
     try:
         result = await next_in_queue(room_id)
@@ -130,3 +168,22 @@ async def next_callback_handler(update: Update, context: ContextTypes.DEFAULT_TY
         await query.edit_message_text(f"Queue is empty for room {room_id}.")
     else:
         await query.edit_message_text("Next user has been notified!")
+
+
+async def copyid_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle inline keyboard callback for copyid:room_id — show copyable ID."""
+    query = update.callback_query
+    await query.answer()
+
+    room_id = query.data.split(":", 1)[1]
+    await query.edit_message_text(
+        f"Share this room ID with students:\n`{room_id}`",
+        parse_mode="Markdown",
+    )
+
+
+async def dismiss_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle dismiss callback — cancel the confirmation prompt."""
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text("Action cancelled.")

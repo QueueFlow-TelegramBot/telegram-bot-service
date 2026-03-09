@@ -1,8 +1,12 @@
+import uuid
 import httpx
 import config
 from logger import get_logger
 
 log = get_logger(__name__)
+
+# Mock in-memory store: room_id -> {room_id, room_name, creator_id, active}
+_mock_rooms: dict[str, dict] = {}
 
 
 async def create_room(room_name: str, creator_id: str) -> dict:
@@ -10,7 +14,14 @@ async def create_room(room_name: str, creator_id: str) -> dict:
     log.info("create_room called", extra={"room_name": room_name})
 
     if config.MOCK_SERVICES:
-        return {"room_id": "room-001"}
+        room_id = str(uuid.uuid4())[:8]
+        _mock_rooms[room_id] = {
+            "room_id": room_id,
+            "room_name": room_name,
+            "creator_id": creator_id,
+            "active": True,
+        }
+        return {"room_id": room_id}
 
     async with httpx.AsyncClient() as client:
         resp = await client.post(
@@ -28,8 +39,9 @@ async def get_rooms(creator_id: str) -> list[dict]:
 
     if config.MOCK_SERVICES:
         return [
-            {"room_id": "room-001", "room_name": "Reception A", "active": True},
-            {"room_id": "room-002", "room_name": "Reception B", "active": True},
+            {"room_id": r["room_id"], "room_name": r["room_name"], "active": r["active"]}
+            for r in _mock_rooms.values()
+            if r["creator_id"] == creator_id
         ]
 
     async with httpx.AsyncClient() as client:
@@ -47,9 +59,10 @@ async def join_room(room_id: str, user_id: str) -> dict:
     log.info("join_room called", extra={"room_id": room_id, "user_id": user_id})
 
     if config.MOCK_SERVICES:
+        room = _mock_rooms.get(room_id)
         return {
             "no_of_people_in_front": 3,
-            "room_name": "Reception A",
+            "room_name": room["room_name"] if room else room_id,
             "creator_name": "Secretary",
         }
 
