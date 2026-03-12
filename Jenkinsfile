@@ -5,6 +5,8 @@ pipeline {
 
     environment {
         JOB_NAME = "${env.JOB_NAME}"
+        BRANCH_NAME = "${env.BRANCH_NAME}"
+        ENV = (BRANCH_NAME == 'main' || BRANCH_NAME == 'master') ? 'prod' : 'dev'
         IMAGE_NAME = "${DOCKERHUB_USERNAME}/${env.JOB_NAME}"
     }
 
@@ -40,7 +42,7 @@ pipeline {
             steps {
                 script {
                     sh """
-                    kubectl set image deployment/telegram-bot-deployment telegram-bot=${IMAGE_NAME}:${env.BUILD_ID} --namespace=default
+                    kubectl set image deployment/${env.JOB_NAME}-${env.ENV} ${env.JOB_NAME}=${IMAGE_NAME}:${env.BUILD_ID} --namespace=default
                     """
                 }
             }
