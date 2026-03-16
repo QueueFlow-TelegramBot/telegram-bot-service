@@ -2,7 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
 from bot.middleware.auth import require_role
 from bot.keyboards.inline import rooms_keyboard, next_keyboard, room_actions_keyboard, next_confirm_keyboard
-from services.user_client import get_cached_user
+from services.user_client import get_user_by_telegram_id
 from services.scheduling_client import create_room, get_rooms, next_in_queue
 from logger import get_logger
 
@@ -37,7 +37,7 @@ async def create_room_name_received(update: Update, context: ContextTypes.DEFAUL
 async def _do_create_room(update: Update, context: ContextTypes.DEFAULT_TYPE, room_name: str):
     """Perform the actual create room logic."""
     telegram_id = update.effective_user.id
-    user = get_cached_user(telegram_id)
+    user = await get_user_by_telegram_id(telegram_id)
     creator_id = user["user_id"]
 
     log.info("create_room command", extra={"telegram_id": telegram_id, "room_name": room_name})
@@ -62,7 +62,7 @@ async def _do_create_room(update: Update, context: ContextTypes.DEFAULT_TYPE, ro
 async def get_rooms_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /get_rooms — list active rooms."""
     telegram_id = update.effective_user.id
-    user = get_cached_user(telegram_id)
+    user = await get_user_by_telegram_id(telegram_id)
     creator_id = user["user_id"]
 
     log.info("get_rooms command", extra={"telegram_id": telegram_id})
@@ -91,7 +91,7 @@ async def next_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not context.args:
         # Show inline keyboard with rooms to pick from
-        user = get_cached_user(telegram_id)
+        user = await get_user_by_telegram_id(telegram_id)
         try:
             rooms = await get_rooms(user["user_id"])
         except Exception as e:

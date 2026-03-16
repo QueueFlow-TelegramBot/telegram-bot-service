@@ -1,7 +1,7 @@
 from functools import wraps
 from telegram import Update
 from telegram.ext import ContextTypes
-from services.user_client import get_cached_user
+from services.user_client import user_cache
 from logger import get_logger
 
 log = get_logger(__name__)
@@ -16,7 +16,7 @@ def require_role(*allowed_roles: str):
         @wraps(func)
         async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
             telegram_id = update.effective_user.id
-            user = get_cached_user(telegram_id)
+            user = user_cache.get(telegram_id)
 
             if not user:
                 await update.message.reply_text(

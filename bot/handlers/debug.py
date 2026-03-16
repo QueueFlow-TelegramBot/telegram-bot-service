@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from services.user_client import get_cached_user, user_cache
+from services.user_client import get_user_by_telegram_id, user_cache
 from logger import get_logger
 
 log = get_logger(__name__)
@@ -11,7 +11,7 @@ VALID_ROLES = ("student", "secretary", "admin")
 async def set_role_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /set_role [role] — debug command to change role (mock mode only)."""
     telegram_id = update.effective_user.id
-    user = get_cached_user(telegram_id)
+    user = await get_user_by_telegram_id(telegram_id)
 
     if not user:
         await update.message.reply_text("Please use /start first to register.")

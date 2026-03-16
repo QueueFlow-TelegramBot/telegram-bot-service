@@ -49,5 +49,29 @@ async def update_display_name(user_id: str, display_name: str) -> bool:
         return resp.json().get("success", False)
 
 
-def get_cached_user(telegram_id: int) -> dict | None:
-    return user_cache.get(telegram_id)
+async def get_user_by_telegram_id(telegram_id: int) -> dict | None:
+    """GET /user?telegramId= — fetch user by telegram_id."""
+    log.info("get_user_by_telegram_id called", extra={"telegram_id": telegram_id})
+
+    # if telegram_id in user_cache:
+    #     log.info("User found in cache", extra={"telegram_id": telegram_id})
+    #     return user_cache[telegram_id]
+
+    if config.MOCK_SERVICES:
+        return user_cache.get(telegram_id)
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{config.USER_SERVICE_URL}/user/{telegram_id}",
+            timeout=10,
+        )
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+        data = resp.json()
+        user_cache[telegram_id] = {**data, "display_name": data.get("display_name", "")}
+        return data
+
+
+# def get_cached_user(telegram_id: int) -> dict | None:
+#     return user_cache.get(telegram_id)
