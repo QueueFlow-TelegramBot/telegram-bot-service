@@ -64,7 +64,7 @@ async def start_consumer():
             channel = await connection.channel()
 
             exchange = await channel.declare_exchange(
-                "notifications", aio_pika.ExchangeType.TOPIC, durable=True
+                config.RABBITMQ_EXCHANGE, aio_pika.ExchangeType.TOPIC, durable=True
             )
             queue = await channel.declare_queue("bot_notifications", durable=True)
             await queue.bind(exchange, routing_key="notification.*")

@@ -3,6 +3,9 @@ import httpx
 import config
 from logger import get_logger
 
+from bot.notifications.publisher import rabbitmq_publisher
+from services.user_client import get_user_by_telegram_id
+
 log = get_logger(__name__)
 
 # Mock in-memory store: room_id -> {room_id, room_name, creator_id, active}
@@ -10,7 +13,7 @@ _mock_rooms: dict[str, dict] = {}
 
 
 async def create_room(room_name: str, creator_id: str) -> dict:
-    """POST /room — create a new queue room."""
+    """POST /rooms — create a new queue room."""
     log.info("create_room called", extra={"room_name": room_name})
 
     if config.MOCK_SERVICES:
@@ -25,7 +28,7 @@ async def create_room(room_name: str, creator_id: str) -> dict:
 
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f"{config.SCHEDULING_SERVICE_URL}/room",
+            f"{config.SCHEDULING_SERVICE_URL}/rooms",
             json={"room_name": room_name, "creator_id": creator_id},
             timeout=10,
         )
@@ -34,7 +37,7 @@ async def create_room(room_name: str, creator_id: str) -> dict:
 
 
 async def get_rooms(creator_id: str) -> list[dict]:
-    """GET /room?creatorId= — list rooms for a creator."""
+    """GET /rooms?creatorId= — list rooms for a creator."""
     log.info("get_rooms called", extra={"creator_id": creator_id})
 
     if config.MOCK_SERVICES:
@@ -46,7 +49,7 @@ async def get_rooms(creator_id: str) -> list[dict]:
 
     async with httpx.AsyncClient() as client:
         resp = await client.get(
-            f"{config.SCHEDULING_SERVICE_URL}/room",
+            f"{config.SCHEDULING_SERVICE_URL}/rooms",
             params={"creatorId": creator_id},
             timeout=10,
         )
@@ -55,7 +58,7 @@ async def get_rooms(creator_id: str) -> list[dict]:
 
 
 async def join_room(room_id: str, user_id: str) -> dict:
-    """POST /room/{room_id}/user — join a queue."""
+    """POST /rooms/{room_id}/join — join a queue."""
     log.info("join_room called", extra={"room_id": room_id, "user_id": user_id})
 
     if config.MOCK_SERVICES:
@@ -66,10 +69,17 @@ async def join_room(room_id: str, user_id: str) -> dict:
             "creator_name": "Secretary",
         }
 
+    user = await get_user_by_telegram_id(user_id)
+    body = {"user_id": str(user_id), "user_name": user.get("display_name", "Unknown")}
+    rabbitmq_publisher.publish(
+        routing_key=f"room.{room_id}",
+        body=body,
+    )
+
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f"{config.SCHEDULING_SERVICE_URL}/room/{room_id}/user",
-            json={"user_id": user_id},
+            f"{config.SCHEDULING_SERVICE_URL}/rooms/{room_id}/join",
+            json=body,
             timeout=10,
         )
         resp.raise_for_status()
@@ -77,7 +87,7 @@ async def join_room(room_id: str, user_id: str) -> dict:
 
 
 async def next_in_queue(room_id: str) -> dict:
-    """POST /room/{room_id}/next — call next person."""
+    """POST /rooms/{room_id}/next — call next person."""
     log.info("next_in_queue called", extra={"room_id": room_id})
 
     if config.MOCK_SERVICES:
@@ -85,7 +95,7 @@ async def next_in_queue(room_id: str) -> dict:
 
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f"{config.SCHEDULING_SERVICE_URL}/room/{room_id}/next",
+            f"{config.SCHEDULING_SERVICE_URL}/rooms/{room_id}/next",
             json={},
             timeout=10,
         )

@@ -2,7 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
 from bot.middleware.auth import require_role
 from bot.keyboards.inline import cancel_confirm_keyboard
-from services.user_client import get_cached_user
+from services.user_client import get_user_by_telegram_id
 from services.scheduling_client import join_room
 from logger import get_logger
 
@@ -39,13 +39,11 @@ async def join_queue_room_id_received(update: Update, context: ContextTypes.DEFA
 async def _do_join(update: Update, context: ContextTypes.DEFAULT_TYPE, room_id: str):
     """Perform the actual join queue logic."""
     telegram_id = update.effective_user.id
-    user = get_cached_user(telegram_id)
-    user_id = user["user_id"]
 
     log.info("join_queue command", extra={"telegram_id": telegram_id, "room_id": room_id})
 
     try:
-        data = await join_room(room_id, user_id)
+        data = await join_room(room_id, telegram_id)
     except Exception as e:
         log.error("Failed to join room", extra={"error": str(e)})
         await update.message.reply_text(

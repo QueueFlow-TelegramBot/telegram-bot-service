@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes, filters
-from services.user_client import get_cached_user, update_display_name, user_cache
+from services.user_client import update_display_name, user_cache, get_user_by_telegram_id
 from logger import get_logger
 
 log = get_logger(__name__)
@@ -16,7 +16,7 @@ async def profile_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     telegram_id = update.effective_user.id
-    user = get_cached_user(telegram_id)
+    user = await get_user_by_telegram_id(telegram_id)
 
     if not user:
         await update.message.reply_text("Please use /start first to register.")

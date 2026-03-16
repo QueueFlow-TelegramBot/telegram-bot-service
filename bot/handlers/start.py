@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from services.user_client import create_user, get_cached_user
+from services.user_client import create_user, get_user_by_telegram_id
 from logger import get_logger
 
 log = get_logger(__name__)
@@ -29,14 +29,17 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     log.info("start command received", extra={"telegram_id": telegram_id})
 
-    try:
-        data = await create_user(telegram_id, display_name)
-    except Exception as e:
-        log.error("Failed to create user", extra={"error": str(e)})
-        await update.message.reply_text(
-            "Sorry, registration failed. Please try again later."
-        )
-        return
+    # First check if user is already registered (e.g. from cache), to avoid unnecessary API call
+    data = await get_user_by_telegram_id(telegram_id)
+    if not data:
+        try:
+            data = await create_user(telegram_id, display_name)
+        except Exception as e:
+            log.error("Failed to create user", extra={"error": str(e)})
+            await update.message.reply_text(
+                "Sorry, registration failed. Please try again later."
+            )
+            return
 
     role = data.get("role", "student")
     msg = WELCOME_MSG
@@ -52,7 +55,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /help — show commands based on role."""
     telegram_id = update.effective_user.id
-    user = get_cached_user(telegram_id)
+    user = await get_user_by_telegram_id(telegram_id)
 
     if not user:
         await update.message.reply_text("Please use /start first to register.")
