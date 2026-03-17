@@ -8,12 +8,8 @@ from logger import get_logger
 
 log = get_logger(__name__)
 
-# In-memory tracking: telegram_id -> {room_id, position}
-active_queues: dict[int, dict] = {}
-
 # ConversationHandler state
 WAITING_ROOM_ID = 0
-
 
 @require_role("student", "secretary", "admin")
 async def join_queue_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -51,9 +47,8 @@ async def _do_join(update: Update, context: ContextTypes.DEFAULT_TYPE, room_id: 
         )
         return ConversationHandler.END
 
-    position = data.get("no_of_people_in_front", 0)
-    room_name = data.get("room_name", room_id)
-    active_queues[telegram_id] = {"room_id": room_id, "position": position}
+    position = data.get("people_in_queue", 0)
+    room_name = data.get("name", room_id)
 
     await update.message.reply_text(
         f"You are #{position + 1} in queue for {room_name}.\n"
@@ -64,6 +59,9 @@ async def _do_join(update: Update, context: ContextTypes.DEFAULT_TYPE, room_id: 
 
 @require_role("student", "secretary", "admin")
 async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Not implemented yet. Please check back later.")
+    return
+
     """Handle /status — show current queue position."""
     telegram_id = update.effective_user.id
 
@@ -80,6 +78,9 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @require_role("student", "secretary", "admin")
 async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Not implemented yet. Please check back later.")
+    return
+
     """Handle /cancel — ask confirmation before leaving the queue."""
     telegram_id = update.effective_user.id
 
@@ -95,6 +96,9 @@ async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def cancel_confirm_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Not implemented yet. Please check back later.")
+    return
+
     """Handle do_cancel callback — actually leave the queue."""
     query = update.callback_query
     await query.answer()

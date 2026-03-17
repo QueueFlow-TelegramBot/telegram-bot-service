@@ -19,6 +19,7 @@ from bot.handlers.room import (
 )
 from bot.handlers.profile import profile_handler, CHANGE_PREFIX
 from bot.notifications.consumer import start_consumer, set_bot_app
+from bot.notifications.publisher import rabbitmq_publisher
 
 log = get_logger(__name__)
 
@@ -38,6 +39,10 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
 
 async def post_init(application):
     """Called after the bot app is fully initialized — start background tasks."""
+    if not config.MOCK_SERVICES:
+        await rabbitmq_publisher.connect()
+        log.info("RabbitMQ publisher connected")
+
     commands = [
         BotCommand("start", "Register and get welcome message"),
         BotCommand("help", "Show available commands"),
@@ -57,6 +62,13 @@ async def post_init(application):
         log.info("RabbitMQ consumer task scheduled")
 
 
+async def post_shutdown(application):
+    """Called during app shutdown — close RabbitMQ publisher connection."""
+    if not config.MOCK_SERVICES:
+        await rabbitmq_publisher.disconnect()
+        log.info("RabbitMQ publisher disconnected")
+
+
 def main():
     if not config.BOT_TOKEN:
         log.error("BOT_TOKEN is not set")
@@ -71,6 +83,7 @@ def main():
         ApplicationBuilder()
         .token(config.BOT_TOKEN)
         .post_init(post_init)
+        .post_shutdown(post_shutdown)
         .build()
     )
 

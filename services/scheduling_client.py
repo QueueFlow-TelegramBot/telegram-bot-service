@@ -71,7 +71,7 @@ async def join_room(room_id: str, user_id: str) -> dict:
 
     user = await get_user_by_telegram_id(user_id)
     body = {"user_id": str(user_id), "user_name": user.get("display_name", "Unknown")}
-    rabbitmq_publisher.publish(
+    await rabbitmq_publisher.publish(
         routing_key=f"room.{room_id}",
         body=body,
     )
