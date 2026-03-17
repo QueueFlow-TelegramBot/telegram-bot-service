@@ -34,14 +34,7 @@ class RabbitMQPublisher:
 
 
     async def publish(self, routing_key: str, body: dict):
-        if self._exchange is None:
-            raise RuntimeError("RabbitMQ not connected")
-
-        # Declare and bind queue
-        if routing_key.startswith("notification."):
-            queue = await self._channel.declare_queue(routing_key, auto_delete=True)
-        else:
-            queue = await self._channel.declare_queue(routing_key, durable=True)
+        queue = await self._channel.declare_queue(routing_key, durable=True)
         await queue.bind(self._exchange, routing_key=routing_key)
 
         message = aio_pika.Message(
@@ -54,13 +47,5 @@ class RabbitMQPublisher:
             extra={"action": "publish", "routing_key": routing_key, "queue_name": routing_key, "success": True},
         )
 
-    @property
-    def is_connected(self) -> bool:
-        return self._connection is not None and not self._connection.is_closed
-
 
 rabbitmq_publisher = RabbitMQPublisher()
-
-
-async def get_rabbitmq() -> RabbitMQPublisher:
-    return rabbitmq_publisher

@@ -3,6 +3,10 @@ import aio_pika
 import config
 from logger import get_logger
 
+
+NOTIFICATION_QUEUE_NAME = "notifications"
+NOTIFICATION_ROUTING_KEY = "notification.*"
+
 log = get_logger(__name__)
 
 # Will be set by main.py after bot app is created
@@ -66,8 +70,8 @@ async def start_consumer():
             exchange = await channel.declare_exchange(
                 config.RABBITMQ_EXCHANGE, aio_pika.ExchangeType.TOPIC, durable=True
             )
-            queue = await channel.declare_queue("bot_notifications", durable=True)
-            await queue.bind(exchange, routing_key="notification.*")
+            queue = await channel.declare_queue(NOTIFICATION_QUEUE_NAME, durable=True, auto_delete=False)
+            await queue.bind(exchange, routing_key=NOTIFICATION_ROUTING_KEY)
             await queue.consume(on_notification)
 
             log.info("RabbitMQ consumer started, listening on notification.*")
