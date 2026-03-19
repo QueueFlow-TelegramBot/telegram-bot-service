@@ -3,7 +3,6 @@ import httpx
 import config
 from logger import get_logger
 
-from bot.notifications.publisher import rabbitmq_publisher
 from services.user_client import get_user_by_telegram_id
 
 log = get_logger(__name__)
@@ -73,10 +72,6 @@ async def join_room(room_id: str, user_id: str) -> dict:
 
     user = await get_user_by_telegram_id(user_id)
     body = {"user_id": str(user_id), "user_name": user.get("display_name", "Unknown")}
-    await rabbitmq_publisher.publish(
-        routing_key=f"room.{room_id}",
-        body=body,
-    )
 
     async with httpx.AsyncClient() as client:
         resp = await client.post(
