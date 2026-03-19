@@ -1,6 +1,7 @@
 import asyncio
 import aio_pika
 import config
+import json
 from logger import get_logger
 
 
@@ -35,10 +36,12 @@ async def on_notification(message: aio_pika.abc.AbstractIncomingMessage):
             log.warning("Invalid telegram_id in routing key", extra={"routing_key": routing_key})
             return
 
-        room_id = message.body.decode("utf-8")
+        room = json.loads(message.body.decode("utf-8"))
+        room_id = room.get("room_id", "unknown")
+        room_name = room.get("room_name", room_id)
         log.info(
             "Notification received",
-            extra={"telegram_id": telegram_id, "room_id": room_id},
+            extra={"telegram_id": telegram_id, "room_id": room_id, "room_name": room_name},
         )
 
         if _bot_app is None:
@@ -48,7 +51,7 @@ async def on_notification(message: aio_pika.abc.AbstractIncomingMessage):
         try:
             await _bot_app.bot.send_message(
                 chat_id=telegram_id,
-                text=f"It's your turn! Room: {room_id}",
+                text=f"It's your turn! Room: {room_name} (ID: {room_id})",
             )
             log.info("Notification sent", extra={"telegram_id": telegram_id})
         except Exception as e:
