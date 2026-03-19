@@ -12,7 +12,7 @@ log = get_logger(__name__)
 WAITING_ROOM_NAME = 0
 
 
-@require_role("secretary")
+@require_role("student", "secretary", "admin")
 async def create_room_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /create_room [room_name] — if no args, ask for room name."""
     if context.args:
@@ -37,13 +37,11 @@ async def create_room_name_received(update: Update, context: ContextTypes.DEFAUL
 async def _do_create_room(update: Update, context: ContextTypes.DEFAULT_TYPE, room_name: str):
     """Perform the actual create room logic."""
     telegram_id = update.effective_user.id
-    user = await get_user_by_telegram_id(telegram_id)
-    creator_id = user["user_id"]
 
     log.info("create_room command", extra={"telegram_id": telegram_id, "room_name": room_name})
 
     try:
-        data = await create_room(room_name, creator_id)
+        data = await create_room(room_name, telegram_id)
     except Exception as e:
         log.error("Failed to create room", extra={"error": str(e)})
         await update.message.reply_text("Could not create the room. Please try again later.")
@@ -58,17 +56,16 @@ async def _do_create_room(update: Update, context: ContextTypes.DEFAULT_TYPE, ro
     )
 
 
-@require_role("secretary")
+@require_role("student", "secretary", "admin")
 async def get_rooms_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /get_rooms — list active rooms."""
     telegram_id = update.effective_user.id
     user = await get_user_by_telegram_id(telegram_id)
-    creator_id = user["user_id"]
 
     log.info("get_rooms command", extra={"telegram_id": telegram_id})
 
     try:
-        rooms = await get_rooms(creator_id)
+        rooms = await get_rooms(telegram_id)
     except Exception as e:
         log.error("Failed to get rooms", extra={"error": str(e)})
         await update.message.reply_text("Could not fetch rooms. Please try again later.")
@@ -84,16 +81,15 @@ async def get_rooms_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-@require_role("secretary")
+@require_role("student", "secretary", "admin")
 async def next_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /next [room_id] — call next person in queue."""
     telegram_id = update.effective_user.id
 
     if not context.args:
         # Show inline keyboard with rooms to pick from
-        user = await get_user_by_telegram_id(telegram_id)
         try:
-            rooms = await get_rooms(user["user_id"])
+            rooms = await get_rooms(telegram_id)
         except Exception as e:
             log.error("Failed to get rooms for next", extra={"error": str(e)})
             await update.message.reply_text("Could not fetch rooms.")
@@ -158,7 +154,7 @@ async def do_next_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log.info("do_next callback", extra={"room_id": room_id})
 
     try:
-        result = await next_in_queue(room_id)
+        result = await next_in_queue(room_id, update.effective_user.id)
     except Exception as e:
         log.error("Failed to call next (callback)", extra={"error": str(e)})
         await query.edit_message_text("Failed to call next person. Please try again.")
@@ -167,7 +163,8 @@ async def do_next_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if result.get("error") == "queue_empty":
         await query.edit_message_text(f"Queue is empty for room {room_id}.")
     else:
-        await query.edit_message_text("Next user has been notified!")
+        next_user = await get_user_by_telegram_id(result.get("next_user_id"))
+        await query.edit_message_text("Next person called: {}".format(next_user.get("display_name", "Unknown")))
 
 
 async def copyid_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
