@@ -48,7 +48,7 @@ async def _do_join(update: Update, context: ContextTypes.DEFAULT_TYPE, room_id: 
         return ConversationHandler.END
 
     position = data.get("people_in_queue", 0)
-    room_name = data.get("name", room_id)
+    room_name = data.get("room_name", room_id)
 
     await update.message.reply_text(
         f"You are #{position + 1} in queue for {room_name}.\n"
