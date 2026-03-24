@@ -60,10 +60,6 @@ async def on_notification(message: aio_pika.abc.AbstractIncomingMessage):
 
 async def start_consumer():
     """Connect to RabbitMQ and subscribe to notification.* topic."""
-    if config.MOCK_SERVICES:
-        log.info("MOCK_SERVICES=true, skipping RabbitMQ consumer")
-        return
-
     retry_delay = 5
     while True:
         try:

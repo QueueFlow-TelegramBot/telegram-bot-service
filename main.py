@@ -39,10 +39,6 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
 
 async def post_init(application):
     """Called after the bot app is fully initialized — start background tasks."""
-    if not config.MOCK_SERVICES:
-        await rabbitmq_publisher.connect()
-        log.info("RabbitMQ publisher connected")
-
     commands = [
         BotCommand("start", "Register and get welcome message"),
         BotCommand("help", "Show available commands"),
@@ -53,20 +49,16 @@ async def post_init(application):
         BotCommand("get_rooms", "List your active rooms"),
         BotCommand("next", "Call next person in queue"),
     ]
-    if config.MOCK_SERVICES:
-        commands.append(BotCommand("set_role", "Change your role (debug)"))
     await application.bot.set_my_commands(commands)
 
-    if not config.MOCK_SERVICES:
-        asyncio.create_task(start_consumer())
-        log.info("RabbitMQ consumer task scheduled")
+    asyncio.create_task(start_consumer())
+    log.info("RabbitMQ consumer task scheduled")
 
 
 async def post_shutdown(application):
     """Called during app shutdown — close RabbitMQ publisher connection."""
-    if not config.MOCK_SERVICES:
-        await rabbitmq_publisher.disconnect()
-        log.info("RabbitMQ publisher disconnected")
+    await rabbitmq_publisher.disconnect()
+    log.info("RabbitMQ publisher disconnected")
 
 
 def main():
@@ -74,10 +66,7 @@ def main():
         log.error("BOT_TOKEN is not set")
         raise SystemExit("BOT_TOKEN environment variable is required")
 
-    log.info(
-        "Starting QueueFlow bot",
-        extra={"mock_services": config.MOCK_SERVICES},
-    )
+    log.info("Starting QueueFlow bot")
 
     app = (
         ApplicationBuilder()
@@ -116,11 +105,6 @@ def main():
     app.add_handler(CommandHandler("cancel", cancel_handler, msg_only))
     app.add_handler(CommandHandler("get_rooms", get_rooms_handler, msg_only))
     app.add_handler(CommandHandler("next", next_handler, msg_only))
-
-    # Debug command (mock mode only)
-    if config.MOCK_SERVICES:
-        from bot.handlers.debug import set_role_handler
-        app.add_handler(CommandHandler("set_role", set_role_handler, msg_only))
 
     # Callback query handlers for inline keyboards
     app.add_handler(CallbackQueryHandler(room_callback_handler, pattern=r"^room:"))
