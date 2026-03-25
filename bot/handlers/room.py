@@ -1,6 +1,5 @@
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
-from bot.middleware.auth import require_role
 from bot.keyboards.inline import rooms_keyboard, next_keyboard, room_actions_keyboard, next_confirm_keyboard
 from services.user_client import get_user_by_telegram_id
 from services.scheduling_client import create_room, get_rooms, next_in_queue
@@ -12,7 +11,6 @@ log = get_logger(__name__)
 WAITING_ROOM_NAME = 0
 
 
-@require_role("student", "secretary", "admin")
 async def create_room_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /create_room [room_name] — if no args, ask for room name."""
     if context.args:
@@ -56,11 +54,9 @@ async def _do_create_room(update: Update, context: ContextTypes.DEFAULT_TYPE, ro
     )
 
 
-@require_role("student", "secretary", "admin")
 async def get_rooms_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /get_rooms — list active rooms."""
     telegram_id = update.effective_user.id
-    user = await get_user_by_telegram_id(telegram_id)
 
     log.info("get_rooms command", extra={"telegram_id": telegram_id})
 
@@ -81,7 +77,6 @@ async def get_rooms_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-@require_role("student", "secretary", "admin")
 async def next_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /next [room_id] — call next person in queue."""
     telegram_id = update.effective_user.id

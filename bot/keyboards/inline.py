@@ -5,7 +5,7 @@ def rooms_keyboard(rooms: list[dict]) -> InlineKeyboardMarkup:
     """Build an inline keyboard from a list of rooms."""
     buttons = [
         [InlineKeyboardButton(
-            text=f"{r['room_name']} ({'active' if r.get('active') else 'inactive'})",
+            text=f"{r['name']} ({r.get('status')})",
             callback_data=f"room:{r['room_id']}",
         )]
         for r in rooms
@@ -17,11 +17,11 @@ def next_keyboard(rooms: list[dict]) -> InlineKeyboardMarkup:
     """Build an inline keyboard for calling next in a room."""
     buttons = [
         [InlineKeyboardButton(
-            text=f"Next in {r['room_name']}",
+            text=f"Next in {r['name']}",
             callback_data=f"next:{r['room_id']}",
         )]
         for r in rooms
-        if r.get("active")
+        if r.get("status")
     ]
     return InlineKeyboardMarkup(buttons)
 

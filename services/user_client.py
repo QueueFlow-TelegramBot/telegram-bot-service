@@ -4,9 +4,6 @@ from logger import get_logger
 
 log = get_logger(__name__)
 
-# In-memory user context: telegram_id -> {user_id, role, display_name}
-user_cache: dict[int, dict] = {}
-
 
 async def create_user(telegram_id: int, display_name: str) -> dict:
     """POST /user — register or fetch user."""
@@ -20,7 +17,6 @@ async def create_user(telegram_id: int, display_name: str) -> dict:
         )
         resp.raise_for_status()
         data = resp.json()
-        user_cache[telegram_id] = {**data, "display_name": display_name}
         return data
 
 
@@ -51,5 +47,4 @@ async def get_user_by_telegram_id(telegram_id: int) -> dict | None:
             return None
         resp.raise_for_status()
         data = resp.json()
-        user_cache[telegram_id] = {**data, "display_name": data.get("display_name", "")}
         return data
