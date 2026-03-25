@@ -1,6 +1,6 @@
 from telegram import Update
-from telegram.ext import ContextTypes, filters
-from services.user_client import update_display_name, user_cache, get_user_by_telegram_id
+from telegram.ext import ContextTypes
+from services.user_client import update_display_name, get_user_by_telegram_id
 from logger import get_logger
 
 log = get_logger(__name__)
@@ -37,7 +37,6 @@ async def profile_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if success:
-        user_cache[telegram_id]["display_name"] = new_name
         await update.message.reply_text(f"Display name updated to {new_name}.")
     else:
         await update.message.reply_text("Failed to update display name.")

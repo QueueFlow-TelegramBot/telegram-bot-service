@@ -1,8 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler
-from bot.middleware.auth import require_role
 from bot.keyboards.inline import cancel_confirm_keyboard
-from services.user_client import get_user_by_telegram_id
 from services.scheduling_client import join_room
 from logger import get_logger
 
@@ -11,7 +9,7 @@ log = get_logger(__name__)
 # ConversationHandler state
 WAITING_ROOM_ID = 0
 
-@require_role("student", "secretary", "admin")
+
 async def join_queue_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /join_queue [room_id] — if no args, ask for room_id."""
     if context.args:
@@ -57,7 +55,6 @@ async def _do_join(update: Update, context: ContextTypes.DEFAULT_TYPE, room_id: 
     return ConversationHandler.END
 
 
-@require_role("student", "secretary", "admin")
 async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Not implemented yet. Please check back later.")
     return
@@ -76,7 +73,6 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-@require_role("student", "secretary", "admin")
 async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Not implemented yet. Please check back later.")
     return

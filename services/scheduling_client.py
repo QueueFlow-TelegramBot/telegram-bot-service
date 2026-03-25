@@ -1,4 +1,3 @@
-import uuid
 import httpx
 import config
 from logger import get_logger
@@ -66,4 +65,8 @@ async def next_in_queue(room_id: str, creator_id: str) -> dict:
             timeout=10,
         )
         resp.raise_for_status()
+
+        if resp.status_code == 204:
+            return {"error": "queue_empty"}
+
         return resp.json()

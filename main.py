@@ -19,7 +19,6 @@ from bot.handlers.room import (
 )
 from bot.handlers.profile import profile_handler, CHANGE_PREFIX
 from bot.notifications.consumer import start_consumer, set_bot_app
-from bot.notifications.publisher import rabbitmq_publisher
 
 log = get_logger(__name__)
 
@@ -43,8 +42,8 @@ async def post_init(application):
         BotCommand("start", "Register and get welcome message"),
         BotCommand("help", "Show available commands"),
         BotCommand("join_queue", "Join a queue room"),
-        BotCommand("status", "Check your position in queue"),
-        BotCommand("cancel", "Leave the current queue"),
+        # BotCommand("status", "Check your position in queue"),
+        # BotCommand("cancel", "Leave the current queue"),
         BotCommand("create_room", "Create a new queue room"),
         BotCommand("get_rooms", "List your active rooms"),
         BotCommand("next", "Call next person in queue"),
@@ -53,12 +52,6 @@ async def post_init(application):
 
     asyncio.create_task(start_consumer())
     log.info("RabbitMQ consumer task scheduled")
-
-
-async def post_shutdown(application):
-    """Called during app shutdown — close RabbitMQ publisher connection."""
-    await rabbitmq_publisher.disconnect()
-    log.info("RabbitMQ publisher disconnected")
 
 
 def main():
@@ -72,7 +65,6 @@ def main():
         ApplicationBuilder()
         .token(config.BOT_TOKEN)
         .post_init(post_init)
-        .post_shutdown(post_shutdown)
         .build()
     )
 
@@ -101,8 +93,8 @@ def main():
     # Regular command handlers
     app.add_handler(CommandHandler("start", start_handler, msg_only))
     app.add_handler(CommandHandler("help", help_handler, msg_only))
-    app.add_handler(CommandHandler("status", status_handler, msg_only))
-    app.add_handler(CommandHandler("cancel", cancel_handler, msg_only))
+    # app.add_handler(CommandHandler("status", status_handler, msg_only))
+    # app.add_handler(CommandHandler("cancel", cancel_handler, msg_only))
     app.add_handler(CommandHandler("get_rooms", get_rooms_handler, msg_only))
     app.add_handler(CommandHandler("next", next_handler, msg_only))
 
