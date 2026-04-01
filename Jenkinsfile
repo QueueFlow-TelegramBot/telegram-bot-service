@@ -13,14 +13,13 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+                setBuildStatus("Checked out code for ${WS} in ${ENV}", "PENDING")
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                githubNotify credentialsId: 'github-hook-token',
-                    status: 'PENDING',
-                    description: "Building Docker image for ${WS} in ${ENV}"
+                setBuildStatus("Building Docker image for ${WS} in ${ENV}", "PENDING")
 
                 script {
                     dockerImage = docker.build("${IMAGE_NAME}:${env.BUILD_ID}")
@@ -30,9 +29,7 @@ pipeline {
 
         stage('Push Docker Image') {
             steps {
-                githubNotify credentialsId: 'github-hook-token',
-                    status: 'PENDING',
-                    description: "Pushing Docker image for ${WS} in ${ENV}"
+                setBuildStatus("Pushing Docker image for ${WS} in ${ENV}", "PENDING")
 
                 script {
                     echo "Docker Image Tag: ${IMAGE_NAME}:${env.BUILD_ID}"
@@ -47,9 +44,7 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                githubNotify credentialsId: 'github-hook-token',
-                    status: 'PENDING',
-                    description: "Deploying ${WS} to ${ENV} environment"
+                setBuildStatus("Deploying ${WS} to ${ENV}", "PENDING")
 
                 script {
                     sh """
@@ -62,21 +57,27 @@ pipeline {
 
     post {
         always {
-            emailext body: "Project: ${WS}\nBuild: ${env.BUILD_NUMBER}\nResult: ${currentBuild.currentResult}",
-                     subject: "Deployment Notification: ${WS} - Build #${env.BUILD_NUMBER}",
-                     to: "${MAIL_TO}"
+            mail to: "${MAIL_TO}",
+                body: "Deployment of ${WS} to ${ENV} has completed. Check Jenkins for details: ${env.BUILD_URL}",
+                subject: "Deployment Notification: ${WS} - Build #${env.BUILD_NUMBER}"
         }
 
         success {
-            githubNotify credentialsId: 'github-hook-token',
-                status: 'SUCCESS',
-                description: "Deployment successful for ${WS} in ${ENV}"
+            setBuildStatus("Deployment successful for ${WS} in ${ENV}", "SUCCESS")
         }
 
         failure {
-            githubNotify credentialsId: 'github-hook-token',
-                status: 'FAILURE',
-                description: "Deployment failed for ${WS} in ${ENV}"
+            setBuildStatus("Deployment failed for ${WS} in ${ENV}", "FAILURE")
         }
     }
+}
+
+void setBuildStatus(String message, String state) {
+    step([
+        $class: "GitHubCommitStatusSetter",
+        reposSource: [$class: "ManuallyEnteredRepositorySource", url: "${env.GIT_URL}"],
+        contextSource: [$class: "ManuallyEnteredCommitContextSource", context: "ci/jenkins/build-status"],
+        errorHandlers: [[$class: "ChangingBuildStatusErrorHandler", result: "UNSTABLE"]],
+        statusResultSource: [ $class: "ConditionalStatusResultSource", results: [[$class: "AnyBuildResult", message: message, state: state]] ]
+    ]);
 }
