@@ -25,9 +25,6 @@ async def on_notification(message: aio_pika.abc.AbstractIncomingMessage):
         routing_key = message.routing_key or ""
         # routing_key format: notification.<telegram_id>
         parts = routing_key.split(".")
-        if len(parts) < 2:
-            log.warning("Invalid routing key", extra={"routing_key": routing_key})
-            return
 
         telegram_id_str = parts[1]
         try:
