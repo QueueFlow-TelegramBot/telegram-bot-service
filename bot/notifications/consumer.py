@@ -26,7 +26,7 @@ async def on_notification(message: aio_pika.abc.AbstractIncomingMessage):
         # routing_key format: notification.<telegram_id>
         parts = routing_key.split(".")
 
-        telegram_id_str = parts[1]
+        telegram_id_str = parts[-1]
         try:
             telegram_id = int(telegram_id_str)
         except ValueError:
