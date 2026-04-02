@@ -6,7 +6,7 @@ from logger import get_logger
 
 
 NOTIFICATION_QUEUE_NAME = "notifications"
-NOTIFICATION_ROUTING_KEY = "notification.*"
+NOTIFICATION_ROUTING_KEY = f"{config.RABBITMQ_EXCHANGE}.notification.*"
 
 log = get_logger(__name__)
 
