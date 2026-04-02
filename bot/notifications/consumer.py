@@ -5,7 +5,7 @@ import json
 from logger import get_logger
 
 
-NOTIFICATION_QUEUE_NAME = "notifications"
+NOTIFICATION_QUEUE_NAME = f"{config.RABBITMQ_EXCHANGE}.notifications"
 NOTIFICATION_ROUTING_KEY = f"{config.RABBITMQ_EXCHANGE}.notification.*"
 
 log = get_logger(__name__)
